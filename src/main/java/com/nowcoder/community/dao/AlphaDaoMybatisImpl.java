@@ -5,9 +5,9 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 @Primary
-public class AlphaDaoMybatisImpl implements AlphaDao{
+public class AlphaDaoMyBatisImpl implements AlphaDao{
     @Override
     public String select() {
-        return "Mybatis";
+        return "MyBatis";
     }
 }
