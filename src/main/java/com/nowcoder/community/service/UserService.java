@@ -75,14 +75,14 @@ public class UserService implements CommunityConstant {
 
         // 验证账号
         User u = userMapper.selectByName(user.getUsername());
-        if (u != null) {
+        if (u != null&&u.getStatus()==1) {
             map.put("usernameMsg", "该账号已存在!");
             return map;
         }
 
         // 验证邮箱
         u = userMapper.selectByEmail(user.getEmail());
-        if (u != null) {
+        if (u != null&&u.getStatus()==1) {
             map.put("emailMsg", "该邮箱已被注册!");
             return map;
         }
@@ -101,11 +101,10 @@ public class UserService implements CommunityConstant {
         Context context = new Context();
         context.setVariable("email", user.getEmail());
         // http://localhost:8080/community/activation/101/code
-        String url = domain + contextPath + "/activation/" + user.getId() + "/" + user.getActivationCode();
+        String url = domain + contextPath + "/activation/" + user.getId() + "/" + user.getActivationCode();//在激活链接里面传入userId和激活码
         context.setVariable("url", url);
         String content = templateEngine.process("/mail/activation", context);
         mailClient.sendMail(user.getEmail(), "激活账号", content);
-
         return map;
     }
 
@@ -113,7 +112,7 @@ public class UserService implements CommunityConstant {
         User user = userMapper.selectById(userId);
         if (user.getStatus() == 1) {
             return ACTIVATION_REPEAT;
-        } else if (user.getActivationCode().equals(code)) {
+        } else if (user.getActivationCode().equals(code)) {//如果激活码相同
             userMapper.updateStatus(userId, 1);
             clearCache(userId);
             return ACTIVATION_SUCCESS;
@@ -154,16 +153,16 @@ public class UserService implements CommunityConstant {
             map.put("passwordMsg", "密码不正确!");
             return map;
         }
-
+//---------------登录成功了--------------------------//
         // 生成登录凭证
         LoginTicket loginTicket = new LoginTicket();
         loginTicket.setUserId(user.getId());
         loginTicket.setTicket(CommunityUtil.generateUUID());
         loginTicket.setStatus(0);
         loginTicket.setExpired(new Date(System.currentTimeMillis() + expiredSeconds * 1000));
-//        loginTicketMapper.insertLoginTicket(loginTicket);
+//      loginTicketMapper.insertLoginTicket(loginTicket);
 
-        String redisKey = RedisKeyUtil.getTicketKey(loginTicket.getTicket());
+        String redisKey = RedisKeyUtil.getTicketKey(loginTicket.getTicket());//登录凭证存入Redis中
         redisTemplate.opsForValue().set(redisKey, loginTicket);
 
         map.put("ticket", loginTicket.getTicket());
@@ -187,7 +186,7 @@ public class UserService implements CommunityConstant {
     public int updateHeader(int userId, String headerUrl) {
 //        return userMapper.updateHeader(userId, headerUrl);
         int rows = userMapper.updateHeader(userId, headerUrl);
-        clearCache(userId);
+        clearCache(userId);//
         return rows;
     }
 
@@ -215,12 +214,12 @@ public class UserService implements CommunityConstant {
         redisTemplate.delete(redisKey);
     }
 
+    //授权
     public Collection<? extends GrantedAuthority> getAuthorities(int userId) {
         User user = this.findUserById(userId);
 
         List<GrantedAuthority> list = new ArrayList<>();
         list.add(new GrantedAuthority() {
-
             @Override
             public String getAuthority() {
                 switch (user.getType()) {
